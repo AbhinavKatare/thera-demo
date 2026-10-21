@@ -1,0 +1,25 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paypilot-postgres
+    environment:
+      POSTGRES_USER: paypilot
+      POSTGRES_PASSWORD: paypilot
+      POSTGRES_DB: paypilot
+    ports:
+      - '5432:5432'
+    volumes:
+      - paypilot-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U paypilot -d paypilot']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Optional delayed-job infrastructure (pg-boss uses the same Postgres).
+  # Reseeded after first boot; safe to remove if you manage jobs elsewhere.
+
+volumes:
+  paypilot-pgdata:

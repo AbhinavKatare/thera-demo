@@ -1,0 +1,25 @@
+{
+  "name": "@paypilot/slack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc --noEmit",
+    "start": "tsx src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@paypilot/core": "workspace:*",
+    "@paypilot/ai": "workspace:*",
+    "@slack/bolt": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.4"
+  }
+}

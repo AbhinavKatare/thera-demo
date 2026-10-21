@@ -1,0 +1,41 @@
+{
+  "name": "paypilot",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r --workspace-concurrency=1 run test",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:push": "pnpm --filter @paypilot/api exec prisma db push",
+    "db:generate": "pnpm --filter @paypilot/api exec prisma generate",
+    "db:studio": "pnpm --filter @paypilot/api exec prisma studio",
+    "db:seed": "pnpm --filter @paypilot/api exec prisma db seed",
+    "thera:mock": "pnpm --filter @paypilot/mock-thera run dev"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "prisma",
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.6.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.44.0",
+    "vitest": "^3.2.4"
+  }
+}

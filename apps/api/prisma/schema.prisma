@@ -1,0 +1,583 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String
+  slug            String    @unique
+  countryCode     String    @db.VarChar(2)
+  defaultCurrency String    @db.VarChar(3)
+  timezone        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  contractors       Contractor[]
+  contracts         Contract[]
+  invoices          Invoice[]
+  paymentDrafts     PaymentDraft[]
+  payrollRuns       PayrollRun[]
+  approvals         Approval[]
+  auditLogs         AuditLog[]
+  anomalies         Anomaly[]
+  connectorAccounts ConnectorAccount[]
+  storedFiles       StoredFile[]
+  users             User[]
+  slackMappings     SlackUserMapping[]
+  inboundDocuments  InboundDocument[]
+
+  @@index([deletedAt])
+}
+
+model User {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @db.Uuid
+  email     String    @unique
+  name      String
+  role      UserRole  @default(VIEWER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  company       Company            @relation(fields: [companyId], references: [id])
+  slackMappings SlackUserMapping[]
+
+  @@index([companyId])
+  @@index([email])
+  @@index([role])
+  @@index([deletedAt])
+}
+
+model MagicLinkToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  email      String
+  token      String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email])
+  @@index([token])
+}
+
+model SlackUserMapping {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @db.Uuid
+  userId      String    @db.Uuid
+  slackUserId String    @unique
+  slackTeamId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([slackUserId])
+  @@index([deletedAt])
+}
+
+model Contractor {
+  id               String           @id @default(uuid()) @db.Uuid
+  companyId        String           @db.Uuid
+  legalName        String
+  displayName      String
+  email            String
+  taxId            String?
+  countryCode      String           @db.VarChar(2)
+  status            ContractorStatus @default(ACTIVE)
+  defaultRateMinor  Int
+  timezone          String
+  bankAccountNumber String?
+  bankRoutingNumber String?
+  bankIban          String?
+  bankSwiftBic      String?
+  bankName          String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  deletedAt         DateTime?
+
+  company          Company           @relation(fields: [companyId], references: [id])
+  contracts        Contract[]
+  invoices         Invoice[]
+  payrollItems     PayrollItem[]
+  inboundDocuments InboundDocument[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([companyId, status])
+  @@index([email])
+  @@index([deletedAt])
+}
+
+model Contract {
+  id                    String         @id @default(uuid()) @db.Uuid
+  companyId             String         @db.Uuid
+  contractorId          String         @db.Uuid
+  status                ContractStatus @default(ACTIVE)
+  effectiveDate         DateTime
+  endDate               DateTime?
+  rateType              RateType
+  rateMinor             Int
+  currency              String         @db.VarChar(3)
+  contractorCountryCode String         @db.VarChar(2)
+  monthlyCapMinor       Int?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  deletedAt             DateTime?
+
+  company    Company    @relation(fields: [companyId], references: [id])
+  contractor Contractor @relation(fields: [contractorId], references: [id])
+  invoices   Invoice[]
+
+  @@index([companyId])
+  @@index([contractorId])
+  @@index([status])
+  @@index([companyId, status])
+  @@index([deletedAt])
+}
+
+model Invoice {
+  id             String        @id @default(uuid()) @db.Uuid
+  companyId      String        @db.Uuid
+  contractorId   String        @db.Uuid
+  contractId     String        @db.Uuid
+  invoiceNumber  String
+  status         InvoiceStatus @default(DRAFT)
+  periodStart    DateTime
+  periodEnd      DateTime
+  issueDate      DateTime
+  dueDate        DateTime
+  currency       String        @db.VarChar(3)
+  subtotalMinor  Int
+  taxMinor       Int           @default(0)
+  totalMinor     Int
+  taxDescription String?
+  notes              String?
+  invoiceHash        String?
+  fileId             String?           @db.Uuid
+  needsReviewReasons Json?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  deletedAt          DateTime?
+
+  company          Company           @relation(fields: [companyId], references: [id])
+  contractor       Contractor        @relation(fields: [contractorId], references: [id])
+  contract         Contract          @relation(fields: [contractId], references: [id])
+  lineItems        InvoiceLineItem[]
+  paymentDrafts    PaymentDraft[]
+  storedFile       StoredFile?       @relation(fields: [fileId], references: [id])
+  inboundDocuments InboundDocument[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([companyId, status])
+  @@index([dueDate])
+  @@index([companyId, dueDate])
+  @@index([invoiceHash])
+  @@index([companyId, invoiceHash])
+  @@index([contractorId])
+  @@index([deletedAt])
+}
+
+model InvoiceLineItem {
+  id             String    @id @default(uuid()) @db.Uuid
+  invoiceId      String    @db.Uuid
+  description    String
+  quantity       Decimal   @db.Decimal(12, 2)
+  unitPriceMinor Int
+  amountMinor    Int
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([deletedAt])
+}
+
+model PaymentDraft {
+  id                    String             @id @default(uuid()) @db.Uuid
+  companyId             String             @db.Uuid
+  source                PaymentDraftSource
+  sourceId              String             @db.Uuid
+  invoiceId             String?            @db.Uuid
+  amountMinor           Int
+  currency              String             @db.VarChar(3)
+  status                PaymentDraftStatus @default(DRAFT)
+  approvalId            String?            @db.Uuid
+  approvedBy            String?
+  scheduledAt           DateTime?
+  executedAt            DateTime?
+  externalTransactionId String?
+  idempotencyKey        String             @unique
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  deletedAt             DateTime?
+
+  company Company  @relation(fields: [companyId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@index([companyId, status])
+  @@index([source, sourceId])
+  @@index([deletedAt])
+}
+
+model PayrollRun {
+  id          String           @id @default(uuid()) @db.Uuid
+  companyId   String           @db.Uuid
+  status      PayrollRunStatus @default(DRAFT)
+  periodStart DateTime
+  periodEnd   DateTime
+  currency    String           @db.VarChar(3)
+  grossMinor  Int?
+  taxMinor    Int?
+  netMinor    Int?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+
+  company Company       @relation(fields: [companyId], references: [id])
+  items   PayrollItem[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([companyId, status])
+  @@index([periodStart, periodEnd])
+  @@index([deletedAt])
+}
+
+model PayrollItem {
+  id           String            @id @default(uuid()) @db.Uuid
+  payrollRunId String            @db.Uuid
+  contractorId String            @db.Uuid
+  grossMinor   Int
+  taxMinor     Int
+  netMinor     Int
+  currency     String            @db.VarChar(3)
+  status       PayrollItemStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  deletedAt    DateTime?
+
+  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  contractor Contractor @relation(fields: [contractorId], references: [id])
+
+  @@index([payrollRunId])
+  @@index([contractorId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model Approval {
+  id                     String             @id @default(uuid()) @db.Uuid
+  companyId              String             @db.Uuid
+  targetType             ApprovalTargetType
+  targetId               String             @db.Uuid
+  requestedBy            String
+  amountMinor            Int                @default(0)
+  currency               String             @default("USD") @db.VarChar(3)
+  status                 ApprovalStatus     @default(DRAFT)
+  requiredApproversCount Int                @default(1)
+  approvers              Json?              // Array of distinct approver user IDs / signatures
+  decisionNote           String?
+  decidedAt              DateTime?
+  idempotencyKey         String             @unique
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  deletedAt              DateTime?
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@index([companyId, status])
+  @@index([targetType, targetId])
+  @@index([deletedAt])
+}
+
+model AuditLog {
+  id           String    @id @default(uuid()) @db.Uuid
+  companyId    String?   @db.Uuid
+  timestamp    DateTime  @default(now())
+  actorType    ActorType
+  actorId      String
+  action       String
+  resourceType String
+  resourceId   String
+  before       Json?
+  after        Json?
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([timestamp])
+  @@index([companyId, timestamp])
+  @@index([resourceType, resourceId])
+  @@index([action])
+  @@index([actorType, actorId])
+  @@index([deletedAt])
+}
+
+model Anomaly {
+  id         String          @id @default(uuid()) @db.Uuid
+  companyId  String          @db.Uuid
+  entityType String
+  entityId   String          @db.Uuid
+  rule       String
+  severity   AnomalySeverity
+  status     AnomalyStatus   @default(OPEN)
+  detector   AnomalyDetector @default(AI)
+  summary    String
+  details    Json?
+  resolvedBy String?
+  resolvedAt DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  deletedAt  DateTime?
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@index([companyId, status])
+  @@index([entityType, entityId])
+  @@index([deletedAt])
+}
+
+model ConnectorAccount {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  companyId          String                 @db.Uuid
+  provider           ConnectorProvider
+  externalAccountId  String
+  status             ConnectorAccountStatus @default(CONNECTED)
+  credentialsRef     String?
+  lastSyncedAt       DateTime?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  deletedAt          DateTime?
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@index([provider])
+  @@index([deletedAt])
+}
+
+model StoredFile {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String?   @db.Uuid
+  filename    String
+  mimeType    String
+  sizeBytes   Int
+  sha256Hash  String    @unique
+  storagePath String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  company          Company?          @relation(fields: [companyId], references: [id])
+  invoices         Invoice[]
+  inboundDocuments InboundDocument[]
+
+  @@index([companyId])
+  @@index([sha256Hash])
+  @@index([deletedAt])
+}
+
+model DeadLetterJob {
+  id         String   @id @default(uuid()) @db.Uuid
+  queueName  String
+  jobId      String
+  payload    Json?
+  error      String
+  failedAt   DateTime @default(now())
+  retryCount Int      @default(0)
+
+  @@index([queueName])
+  @@index([failedAt])
+}
+
+enum UserRole {
+  OWNER
+  APPROVER
+  VIEWER
+}
+
+enum ContractorStatus {
+  INVITED
+  ACTIVE
+  OFFBOARDED
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  ENDING
+  ENDED
+}
+
+enum RateType {
+  HOURLY
+  FIXED
+  PER_INVOICE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PAID
+  VOID
+  NEEDS_REVIEW
+}
+
+enum PaymentDraftSource {
+  INVOICE
+  PAYROLL_RUN
+  MANUAL
+}
+
+enum PaymentDraftStatus {
+  DRAFT
+  AWAITING_APPROVAL
+  APPROVED
+  REJECTED
+  SCHEDULED
+  EXECUTED
+  VOID
+  FAILED
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  SCHEDULED
+  PROCESSING
+  PROCESSED
+  FAILED
+  CANCELLED
+}
+
+enum PayrollItemStatus {
+  PENDING
+  APPROVED
+  PAID
+  FAILED
+}
+
+enum ApprovalTargetType {
+  INVOICE
+  PAYMENT_DRAFT
+  PAYROLL_RUN
+}
+
+enum ApprovalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SENT
+}
+
+enum ActorType {
+  USER
+  SERVICE
+  CONNECTOR
+}
+
+enum AnomalySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AnomalyStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+enum AnomalyDetector {
+  RULES
+  AI
+  HUMAN
+}
+
+enum ConnectorProvider {
+  QUICKBOOKS
+  XERO
+  MOCK
+}
+
+enum ConnectorAccountStatus {
+  AWAITING_ACTION
+  CONNECTED
+  ERROR
+  DISCONNECTED
+}
+
+model InboundDocument {
+  id              String                @id @default(uuid()) @db.Uuid
+  companyId       String?               @db.Uuid
+  source          InboundDocumentSource @default(EMAIL)
+  senderEmail     String?
+  subject         String?
+  messageId       String?               @unique
+  fileId          String                @db.Uuid
+  status          InboundDocumentStatus @default(PENDING)
+  extractedData   Json?
+  uncertainFields Json?
+  failureReason   String?
+  matchConfidence Float?
+  invoiceId       String?               @db.Uuid
+  contractorId    String?               @db.Uuid
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  deletedAt       DateTime?
+
+  company    Company?    @relation(fields: [companyId], references: [id])
+  file       StoredFile  @relation(fields: [fileId], references: [id])
+  invoice    Invoice?    @relation(fields: [invoiceId], references: [id])
+  contractor Contractor? @relation(fields: [contractorId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@index([senderEmail])
+  @@index([fileId])
+  @@index([deletedAt])
+}
+
+enum InboundDocumentSource {
+  EMAIL
+  UPLOAD
+  API
+}
+
+enum InboundDocumentStatus {
+  PENDING
+  PROCESSED
+  NEEDS_REVIEW
+  FAILED
+}
+

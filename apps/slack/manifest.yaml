@@ -1,0 +1,48 @@
+_metadata:
+  major_version: 1
+  minor_version: 1
+display_information:
+  name: PayPilot Copilot
+  description: Autonomous payroll anomaly detection, invoice approvals, and natural language payroll copilot.
+  background_color: "#0F172A"
+features:
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
+  bot_user:
+    display_name: PayPilot
+    always_online: true
+  slash_commands:
+    - command: /payroll
+      description: View upcoming payroll run preview, flagged anomalies, and approval actions
+      usage_hint: "[upcoming | summary]"
+      should_escape: false
+    - command: /invoices
+      description: View pending invoices awaiting approval or manual review
+      usage_hint: "[pending | review]"
+      should_escape: false
+    - command: /ask
+      description: Ask natural language questions about payroll spend, contractor rates, and invoices
+      usage_hint: "[e.g. how much did we pay contractors in India this month?]"
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - commands
+      - chat:write
+      - chat:write.public
+      - im:history
+      - im:read
+      - im:write
+      - app_mentions:read
+      - users:read
+      - users:read.email
+settings:
+  socket_mode_enabled: true
+  event_subscriptions:
+    bot_events:
+      - app_mention
+      - message.im
+  interactivity:
+    is_enabled: true
