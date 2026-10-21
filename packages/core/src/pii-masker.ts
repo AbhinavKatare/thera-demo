@@ -33,7 +33,7 @@ const ROUTING_REGEX = /\b(routing\s*(?:number|#)?[:\s]*)(\d{5})(\d{4})\b/gi;
 const CARD_REGEX = /\b(?:\d{4}[ -]?){3}\d{4}\b/g;
 
 // Generic bank account numbers preceded by labels
-const ACCOUNT_LABEL_REGEX = /\b((?:account|acc|acct|iban)\s*(?:number|#|id)?[:\s]+)([A-Za-z0-9-]{4,34})\b/gi;
+const ACCOUNT_LABEL_REGEX = /\b((?:account|acc|acct)\s*(?:number|#|id)?[:\s]+)([A-Za-z0-9-]{4,34})\b/gi;
 
 /**
  * Masks an IBAN keeping first 4 characters and last 4 characters visible.
@@ -76,18 +76,17 @@ export function maskPii(text: string): string {
     return `••••-••••-••••-${digits.slice(-4)}`;
   });
 
-  // 2. Mask labeled account numbers
-  result = result.replace(ACCOUNT_LABEL_REGEX, (_match, label, value) => {
-    return `${label}${maskAccountNumber(value)}`;
-  });
-
-  // 3. Mask IBANs
+  // 2. Mask IBANs first (ensuring country code & last 4 digits stay visible)
   result = result.replace(IBAN_REGEX, (match) => {
-    // Basic check: must be at least 15 characters to be a real IBAN
     if (match.length >= 15) {
       return maskIban(match);
     }
     return match;
+  });
+
+  // 3. Mask labeled account numbers
+  result = result.replace(ACCOUNT_LABEL_REGEX, (_match, label, value) => {
+    return `${label}${maskAccountNumber(value)}`;
   });
 
   // 4. Mask routing numbers

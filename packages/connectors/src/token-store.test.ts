@@ -53,8 +53,9 @@ describe('AES-256-GCM Token Encryption', () => {
     const parts = encrypted.split(':');
 
     // Tamper with the 16-byte authentication tag
-    const tamperedTag =
-      '00' + parts[1]!.slice(2);
+    const firstByte = parts[1]!.slice(0, 2);
+    const invertedFirstByte = firstByte === 'ff' ? '00' : 'ff';
+    const tamperedTag = invertedFirstByte + parts[1]!.slice(2);
     const tampered = `${parts[0]}:${tamperedTag}:${parts[2]}`;
 
     expect(() => crypto.decrypt(tampered)).toThrow();

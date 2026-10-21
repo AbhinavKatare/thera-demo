@@ -20,7 +20,9 @@
     "db:generate": "pnpm --filter @paypilot/api exec prisma generate",
     "db:studio": "pnpm --filter @paypilot/api exec prisma studio",
     "db:seed": "pnpm --filter @paypilot/api exec prisma db seed",
-    "thera:mock": "pnpm --filter @paypilot/mock-thera run dev"
+    "thera:mock": "pnpm --filter @paypilot/mock-thera run dev",
+    "demo:reset": "tsx scripts/demo-reset.ts",
+    "demo:run": "tsx scripts/demo-flow.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -34,6 +36,7 @@
     "eslint": "^9.36.0",
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.6.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.44.0",
     "vitest": "^3.2.4"
