@@ -61,6 +61,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     genReqId: (req) => makeRequestId(req as unknown as HasHeaders),
     trustProxy: true,
     bodyLimit: 10 * 1024 * 1024, // 10MB input limit
+    ignoreTrailingSlash: true,
   });
 
   await app.register(cors, { origin: true });

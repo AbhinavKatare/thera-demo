@@ -145,11 +145,17 @@ export class InMemoryPayrollQueryExecutor implements PayrollQueryExecutor {
         };
       }
       case 'CONTRACTOR_DIRECTORY': {
-        const contractors = this.mockData.contractors ?? [
-          { id: 'c1', name: 'Elena Rostova', country: 'DE', currency: 'EUR', status: 'ACTIVE', title: 'Senior Backend Engineer' },
-          { id: 'c2', name: 'Kenji Sato', country: 'JP', currency: 'JPY', status: 'ACTIVE', title: 'Security Specialist' },
-          { id: 'c3', name: 'Amara Okafor', country: 'NG', currency: 'USD', status: 'ACTIVE', title: 'Data Engineer' },
+        const allContractors = this.mockData.contractors ?? [
+          { id: 'c1', name: 'Elena Rostova', country: 'DE', currency: 'EUR', status: 'ACTIVE', title: 'Senior Backend Engineer', netMinor: 450000 },
+          { id: 'c2', name: 'Kenji Sato', country: 'JP', currency: 'JPY', status: 'ACTIVE', title: 'Security Specialist', netMinor: 850000 },
+          { id: 'c3', name: 'Amara Okafor', country: 'NG', currency: 'USD', status: 'ACTIVE', title: 'Data Engineer', netMinor: 380000 },
+          { id: 'c4', name: 'Arun Patel', country: 'IN', currency: 'USD', status: 'ACTIVE', title: 'Full Stack Engineer', netMinor: 870000 },
+          { id: 'c5', name: 'Priya Sharma', country: 'IN', currency: 'USD', status: 'ACTIVE', title: 'ML Engineer', netMinor: 600000 },
         ];
+        const countryFilter = params.country ? String(params.country).toUpperCase() : undefined;
+        const contractors = countryFilter
+          ? allContractors.filter((c: any) => c.country === countryFilter)
+          : allContractors;
         return {
           rows: contractors,
           entityType: 'contractor',

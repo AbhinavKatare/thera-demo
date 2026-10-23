@@ -92,6 +92,14 @@ export class AskPayrollService {
       if (lower.includes('upcoming') || lower.includes('next run') || lower.includes('schedule')) {
         return { queryName: 'UPCOMING_PAYROLL_RUNS', parameters: {} };
       }
+      // Country-specific contractor queries must be checked before generic contractor directory
+      if (lower.includes('india') || lower.includes('portugal') || lower.includes('ireland') || lower.includes('country')) {
+        const country =
+          lower.includes('india') ? 'IN' :
+          lower.includes('portugal') ? 'PT' :
+          lower.includes('ireland') ? 'IE' : undefined;
+        return { queryName: 'CONTRACTOR_DIRECTORY', parameters: country ? { country } : {} };
+      }
       if (lower.includes('contractor') || lower.includes('directory') || lower.includes('team') || lower.includes('who')) {
         return { queryName: 'CONTRACTOR_DIRECTORY', parameters: {} };
       }
@@ -171,6 +179,19 @@ CRITICAL RULES:
           return `Identified ${rows.length} upcoming scheduled payroll runs.`;
         }
         case 'CONTRACTOR_DIRECTORY': {
+          // If all rows are from the same country and have netMinor amounts, compute the total
+          const countries = [...new Set(rows.map((r) => r.country).filter(Boolean))];
+          const hasAmounts = rows.some((r) => r.netMinor !== undefined || r.amountFormatted !== undefined);
+          if (countries.length === 1 && hasAmounts && rows.length > 0) {
+            const countryName = rows[0]?.country === 'IN' ? 'India'
+              : rows[0]?.country === 'PT' ? 'Portugal'
+              : rows[0]?.country === 'IE' ? 'Ireland'
+              : rows[0]?.country;
+            const totalMinor = rows.reduce((acc, r) => acc + (r.netMinor ?? 0), 0);
+            const currency = rows[0]?.currency ?? 'USD';
+            const totalFormatted = `**$${(totalMinor / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })} ${currency}**`;
+            return `This month, you paid ${rows.length} contractors in ${countryName} a total of ${totalFormatted}.`;
+          }
           return `Found ${rows.length} active contractors matching your search criteria.`;
         }
       }

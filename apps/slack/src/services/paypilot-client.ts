@@ -341,7 +341,36 @@ export class PayPilotClient {
         body: JSON.stringify({ companyId, question }),
       });
       if (res.ok) {
-        return (await res.json()) as AskPayrollResult;
+        const apiResult = (await res.json()) as any;
+        // Normalize sourceCitations (API shape) → sources (client shape for block builder)
+        const rawCitations: any[] = apiResult.sourceCitations ?? apiResult.sources ?? [];
+        const normalizedSources = rawCitations.map((c: any) => {
+          const kv = c.keyValues ?? c;
+          // Compute amountFormatted from netMinor, grossMinor, or amountFormatted
+          let amountFormatted = kv.amountFormatted;
+          if (!amountFormatted && (kv.netMinor !== undefined || kv.grossMinor !== undefined)) {
+            const minor = kv.netMinor ?? kv.grossMinor ?? 0;
+            const curr = kv.currency ?? 'USD';
+            amountFormatted = `$${(minor / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })} ${curr}`;
+          }
+          return {
+            name: kv.name ?? kv.contractorName ?? c.label ?? 'Record',
+            country: kv.country,
+            currency: kv.currency,
+            amountFormatted,
+            period: kv.period ?? kv.paidAt,
+            netMinor: kv.netMinor,
+            totalMinor: kv.totalMinor ?? kv.amountMinor,
+          };
+        });
+        return {
+          question: apiResult.question ?? question,
+          answer: apiResult.answer ?? '',
+          queryType: apiResult.queryExecuted ?? apiResult.queryType,
+          parameters: apiResult.parameters,
+          sources: normalizedSources,
+          isRefusal: !!(apiResult.isSecurityBlocked ?? apiResult.isRefusal ?? false),
+        };
       }
     } catch {
       // Fall through to deterministic answering
@@ -370,7 +399,7 @@ export class PayPilotClient {
       };
     }
 
-    // Contractor in India / country query
+    // Contractor in India / country query — must be checked BEFORE generic 'how much' patterns
     if (qLower.includes('india') || qLower.includes('contractors in india')) {
       return {
         question,
